@@ -1,0 +1,75 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String?
+  name           String?
+  role           String    @default("buyer") // buyer | seller | admin
+  kycStatus      String?   @default("pending")
+  phoneVerified  Boolean   @default(false)
+  city           String?
+  createdAt      DateTime  @default(now())
+
+  listings       Listing[]
+  sentMessages   Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  reviewsGiven   Review[]  @relation("GivenReviews")
+  reviewsReceived Review[] @relation("ReceivedReviews")
+}
+
+model Listing {
+  id        String   @id @default(cuid())
+  sellerId  String
+  title     String
+  category  String
+  price     Int
+  negotiable Boolean  @default(false)
+  condition String
+  specs     String?   // JSON stringified
+  location  String?
+  status    String    @default("pending") // draft | pending | live | sold
+  images    String?   // comma-separated URLs
+  docs      String?   // comma-separated file paths
+  createdAt DateTime  @default(now())
+
+  seller    User      @relation(fields: [sellerId], references: [id])
+  messages  Message[]
+  reviews   Review[]
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  listingId   String?
+  body        String
+  attachments String?   // comma-separated
+  offerAmount Int?
+  status      String    @default("sent")
+  createdAt   DateTime  @default(now())
+
+  sender      User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  listing     Listing?  @relation(fields: [listingId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  raterId   String
+  rateeId   String
+  listingId String?
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  rater     User     @relation("GivenReviews", fields: [raterId], references: [id])
+  ratee     User     @relation("ReceivedReviews", fields: [rateeId], references: [id])
+  listing   Listing? @relation(fields: [listingId], references: [id])
+}
